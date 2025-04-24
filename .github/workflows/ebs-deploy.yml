@@ -24,13 +24,12 @@ jobs:
       run: npm run test:headless
 
     - name: Build
-      run: npm run build:prod
+      run: npm run build -- --configuration production --output-path=dist/angular-github-actions-amazon-s3
 
-    - name: Create deploy.zip
+    - name: Zip build output
       run: |
-        cd dist
-        cd $(ls)  # navigate into the dist folder (assumes single app)
-        zip -r ../../deploy.zip
+        cd dist/angular-github-actions-amazon-s3
+        zip -r ../../deploy.zip .
 
     - name: Deploy to Elastic Beanstalk
       uses: einaregilsson/beanstalk-deploy@v21
