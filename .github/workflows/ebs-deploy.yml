@@ -36,7 +36,7 @@ jobs:
 
     - name: Package app into zip
       run: |
-        cd ${{ env.PROJECT_LOCATION }}/dist/angular-github-actions-amazon-s3
+        cd ${{ env.PROJECT_LOCATION }}
         zip -r ../../../${{ github.run_id }}.zip .
 #        cd ${{github.run_id}}
 #        zip -r ../${{github.run_id}}.zip .
