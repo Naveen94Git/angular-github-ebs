@@ -76,22 +76,10 @@ jobs:
     - name: Deploy to Elastic Beanstalk
       run: |
         S3_KEY="artifact/angular-github-actions-amazon-s3/${{ github.run_id }}.zip"
-        aws s3 cp "${{ github.run_id }}.zip" "s3://elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}/$S3_KEY"
-
-        aws elasticbeanstalk create-application-version \
-          --application-name $ELASTIC_BEANSTALK_NAME \
-          --version-label ${{ github.run_id }} \
-          --description "${{ github.run_id }}" \
-          --source-bundle S3Bucket="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}",S3Key="$S3_KEY"
-
-        aws elasticbeanstalk update-environment \
-          --application-name $ELASTIC_BEANSTALK_NAME \
-          --environment-name $ELASTIC_BEANSTALK_ENV_NAME \
-          --version-label ${{ github.run_id }}
-
-        aws elasticbeanstalk wait environment-updated \
-          --application-name $ELASTIC_BEANSTALK_NAME \
-          --environment-name $ELASTIC_BEANSTALK_ENV_NAME
+        aws s3 cp "deploy-files/${{ github.run_id }}.zip" "s3://elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}/$S3_KEY"
+        aws elasticbeanstalk create-application-version --application-name $ELASTIC_BEANSTALK_NAME --version-label ${{github.run_id}} --description ${{github.run_id}} --source-bundle S3Bucket="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}",S3Key="$S3_KEY"
+        aws elasticbeanstalk update-environment --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME --version-label ${{github.run_id}}
+        aws elasticbeanstalk wait environment-updated --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME
 
 #    - name: Deploy to Elastic Beanstalk
 #      uses: einaregilsson/beanstalk-deploy@v21
