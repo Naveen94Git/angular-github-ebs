@@ -25,12 +25,14 @@ jobs:
 
     - name: Install dependencies
       run: npm install
+      working-directory: ${{ env.PROJECT_LOCATION }}
 
     - name: Run tests
       run: npm run test:headless
 
     - name: Build
       run: npm run build -- --configuration production --output-path=dist/angular-github-actions-amazon-s3
+      working-directory: ${{ env.PROJECT_LOCATION }}
 
     - name: Package app into zip
       run: |
