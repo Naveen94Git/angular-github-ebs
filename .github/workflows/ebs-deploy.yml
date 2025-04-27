@@ -91,6 +91,7 @@ jobs:
 
     - name: Deploy to Elastic Beanstalk
       run: |
+        ls -al download
         S3_BUCKET="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}"
         S3_KEY="artifact/angular-github-actions-amazon-s3/${{ github.run_id }}.zip"
 
