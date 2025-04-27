@@ -30,6 +30,8 @@ jobs:
       - name: Generate UUID for version
         id: generate-uuid
         uses: filipstefansson/uuid-action@v1
+        with:
+          name: ${{ github.sha }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
