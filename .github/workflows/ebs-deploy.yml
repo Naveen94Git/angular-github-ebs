@@ -59,7 +59,7 @@ jobs:
           fi
 
       - name: "Deploy Application Version"
-        run: aws elasticbeanstalk update-environment --environment-name ${{ env.ENVIRONMENT_NAME }} --version-label "version@${{ github.sha }}"
+        run: aws elasticbeanstalk update-environment --application-name $APPLICATION_NAME --environment-name $ENVIRONMENT_NAME --version-label ${{github.run_id}}
 
 #          echo "Checking if environment $ENVIRONMENT_NAME exists..."
 #
