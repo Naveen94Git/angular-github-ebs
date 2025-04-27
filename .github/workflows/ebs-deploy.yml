@@ -42,9 +42,21 @@ jobs:
       - name: Ensure Elastic Beanstalk Environment Exists
         run: |
           set -e
-          ENVIRONMENT_NAME="angular-github-ebs-env-v1"
-          APPLICATION_NAME="angular-github-ebs-app-v1"
+          ENVIRONMENT_NAME="angular-github-ebs-env-v2"
+          APPLICATION_NAME="angular-github-ebs-app-v2"
           REGION="us-east-1"
+
+          echo "Checking if environment $APPLICATION_NAME exists..."
+
+          APP_EXISTS=$(aws elasticbeanstalk describe-applications --application-names "$APPLICATION_NAME" --region "$REGION" --query "Applications[0].ApplicationName" --output text || echo "None")
+
+          if [ "$APP_EXISTS" == "None" ]; then
+            echo "Application does not exist. Creating application..."
+            aws elasticbeanstalk create-application --application-name "$APPLICATION_NAME" --region "$REGION"
+            echo "Application created!"
+          else
+            echo "Application already exists. Continuing..."
+          fi
 
           echo "Checking if environment $ENVIRONMENT_NAME exists..."
 
@@ -52,12 +64,22 @@ jobs:
 
           if [ "$ENV_EXISTS" == "None" ]; then
             echo "Environment does not exist. Creating environment..."
+
+          # Find the latest Node.js 18 platform ARN
+          PLATFORM_ARN=$(aws elasticbeanstalk list-platform-versions \
+            --filters "Name=PlatformName,Values=Node.js" "Name=PlatformVersion,Operator=starts_with,Values=18" \
+            --query "PlatformSummaryList[0].PlatformArn" \
+            --output text)
+
+            echo "Using platform ARN: $PLATFORM_ARN"
+            
             aws elasticbeanstalk create-environment \
               --application-name "$APPLICATION_NAME" \
               --environment-name "$ENVIRONMENT_NAME" \
-              --solution-stack-name "Node.js 22 running on 64bit Amazon Linux 2023" \
+              --platform-arn "$PLATFORM_ARN" \
               --option-settings Namespace=aws:elasticbeanstalk:environment,OptionName=EnvironmentType,Value=SingleInstance \
               --region "$REGION"
+              
             echo "Environment creation triggered. Waiting for it to be ready..."
             aws elasticbeanstalk wait environment-exists --application-name "$APPLICATION_NAME" --environment-names "$ENVIRONMENT_NAME" --region "$REGION"
             echo "Environment created!"
@@ -71,8 +93,8 @@ jobs:
         with:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          application_name: "angular-github-ebs-app-v1"
-          environment_name: "angular-github-ebs-env-v1"
+          application_name: "angular-github-ebs-app-v2"
+          environment_name: "angular-github-ebs-env-v2"
           version_label: ${{ steps.generate-uuid.outputs.uuid }}
           region: "us-east-1"
           deployment_package: deploy.zip
