@@ -52,6 +52,19 @@ jobs:
 #        cd dist/angular-github-actions-amazon-s3
 #        zip -r ../../deploy.zip .
 
+    - name: Get timestamp
+      uses: gerred/actions/current-time@master
+      id: current-time
+
+    - name: Run string replace
+      uses: frabert/replace-string-action@master
+      id: format-time
+      with:
+        pattern: '[:\.]+'
+        string: "${{ steps.current-time.outputs.time }}"
+        replace-with: '-'
+        flags: 'g'
+
     - name: List files
       run: ls -al
 
@@ -74,44 +87,44 @@ jobs:
       uses: actions/download-artifact@v4.1.7
 #      with:
 #        name: deploy-files
-
-    - name: Setup EB CLI
-      run: |
-        python --version
-        pip --version
-        pip install awsebcli --upgrade --user
-        eb --version
-        
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-region: ${{ secrets.AWS_REGION }}
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-
-    - name: Deploy to Elastic Beanstalk
-      run: |
-        ls -al deploy-files
-        S3_BUCKET="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}"
-        S3_KEY="artifact/angular-github-actions-amazon-s3/${{ github.run_id }}.zip"
-
-        aws s3 cp deploy-files/${{ github.run_id }}.zip s3://$S3_BUCKET/$S3_KEY
-
-        aws elasticbeanstalk create-application-version \
-          --application-name $ELASTIC_BEANSTALK_NAME \
-          --version-label ${{ github.run_id }} \
-          --description "Deployed from GitHub Actions run ${{ github.run_id }}" \
-          --source-bundle S3Bucket="$S3_BUCKET",S3Key="$S3_KEY"
-        
-        aws elasticbeanstalk update-environment \
-          --application-name $ELASTIC_BEANSTALK_NAME \
-          --environment-name $ELASTIC_BEANSTALK_ENV_NAME \
-          --version-label ${{ github.run_id }}
-        
-        aws elasticbeanstalk wait environment-updated \
-          --application-name $ELASTIC_BEANSTALK_NAME \
-          --environment-name $ELASTIC_BEANSTALK_ENV_NAME
-        
+#
+#    - name: Setup EB CLI
+#      run: |
+#        python --version
+#        pip --version
+#        pip install awsebcli --upgrade --user
+#        eb --version
+#        
+#    - name: Configure AWS Credentials
+#      uses: aws-actions/configure-aws-credentials@v4
+#      with:
+#        aws-region: ${{ secrets.AWS_REGION }}
+#        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#
+#    - name: Deploy to Elastic Beanstalk
+#      run: |
+#        ls -al deploy-files
+#        S3_BUCKET="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}"
+#        S3_KEY="artifact/angular-github-actions-amazon-s3/${{ github.run_id }}.zip"
+#
+#        aws s3 cp deploy-files/${{ github.run_id }}.zip s3://$S3_BUCKET/$S3_KEY
+#
+#        aws elasticbeanstalk create-application-version \
+#          --application-name $ELASTIC_BEANSTALK_NAME \
+#          --version-label ${{ github.run_id }} \
+#          --description "Deployed from GitHub Actions run ${{ github.run_id }}" \
+#          --source-bundle S3Bucket="$S3_BUCKET",S3Key="$S3_KEY"
+#        
+#        aws elasticbeanstalk update-environment \
+#          --application-name $ELASTIC_BEANSTALK_NAME \
+#          --environment-name $ELASTIC_BEANSTALK_ENV_NAME \
+#          --version-label ${{ github.run_id }}
+#        
+#        aws elasticbeanstalk wait environment-updated \
+#          --application-name $ELASTIC_BEANSTALK_NAME \
+#          --environment-name $ELASTIC_BEANSTALK_ENV_NAME
+#        
 #        aws s3 cp deploy-files/${{ github.run_id }}.zip s3://elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}/$S3_KEY
 #        aws elasticbeanstalk create-application-version --application-name $ELASTIC_BEANSTALK_NAME --version-label ${{github.run_id}} --description ${{github.run_id}} --source-bundle S3Bucket="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}",S3Key="$S3_KEY"
 #        aws elasticbeanstalk update-environment --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME --version-label ${{github.run_id}}
@@ -125,15 +138,19 @@ jobs:
 #        aws elasticbeanstalk update-environment --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME --version-label ${{github.run_id}}
 #        aws elasticbeanstalk wait environment-updated --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME
 
-#    - name: Deploy to Elastic Beanstalk
-#      uses: einaregilsson/beanstalk-deploy@v21
-#      with:
-#        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#        application_name: ${{ secrets.EB_APPLICATION_NAME }}
-#        environment_name: ${{ secrets.EB_ENV_NAME }}
-#        region: ${{ secrets.AWS_REGION }}
+    - name: Deploy to Elastic Beanstalk
+      uses: einaregilsson/beanstalk-deploy@v21
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        application_name: ${{ secrets.EB_APPLICATION_NAME }}
+        environment_name: ${{ secrets.EB_ENV_NAME }}
+        region: ${{ secrets.AWS_REGION }}
+        version_label: "v-${{ steps.format-time.outputs.replaced }}"
 #        version_label: "v-${{ github.run_number }}"
-##        deployment_package: deploy.zip
-#        deployment_package: "${{github.run_id}}.zip"
+#        deployment_package: deploy.zip
+        deployment_package: "${{github.run_id}}.zip"
         
+    - name: Deployed!
+      run: echo App deployed to ELB
+      
