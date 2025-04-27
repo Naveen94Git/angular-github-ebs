@@ -23,6 +23,14 @@ jobs:
       with:
         node-version: 16
 
+    - name: Cache node modules
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
+
     - name: Install dependencies
       run: npm install
       working-directory: ${{ env.PROJECT_LOCATION }}
@@ -31,7 +39,8 @@ jobs:
       run: npm run test:headless
 
     - name: Build
-      run: npm run build -- --configuration production --output-path=dist/angular-github-actions-amazon-s3
+#      run: npm run build -- --configuration production --output-path=dist/angular-github-actions-amazon-s3
+      run: npm run build -- --configuration production
       working-directory: ${{ env.PROJECT_LOCATION }}
 
     - name: Package app into zip
@@ -63,9 +72,6 @@ jobs:
     steps:
     - name: Download Artifact
       uses: actions/download-artifact@v4.1.7
-      with:
-        name: deploy-files
-        path: download
 #      with:
 #        name: deploy-files
 
@@ -85,12 +91,30 @@ jobs:
 
     - name: Deploy to Elastic Beanstalk
       run: |
-        ls -al download
+        S3_BUCKET="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}"
         S3_KEY="artifact/angular-github-actions-amazon-s3/${{ github.run_id }}.zip"
-        aws s3 cp deploy-files/${{ github.run_id }}.zip s3://elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}/$S3_KEY
-        aws elasticbeanstalk create-application-version --application-name $ELASTIC_BEANSTALK_NAME --version-label ${{github.run_id}} --description ${{github.run_id}} --source-bundle S3Bucket="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}",S3Key="$S3_KEY"
-        aws elasticbeanstalk update-environment --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME --version-label ${{github.run_id}}
-        aws elasticbeanstalk wait environment-updated --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME
+
+        aws s3 cp download/${{ github.run_id }}.zip s3://$S3_BUCKET/$S3_KEY
+
+        aws elasticbeanstalk create-application-version \
+          --application-name $ELASTIC_BEANSTALK_NAME \
+          --version-label ${{ github.run_id }} \
+          --description "Deployed from GitHub Actions run ${{ github.run_id }}" \
+          --source-bundle S3Bucket="$S3_BUCKET",S3Key="$S3_KEY"
+        
+        aws elasticbeanstalk update-environment \
+          --application-name $ELASTIC_BEANSTALK_NAME \
+          --environment-name $ELASTIC_BEANSTALK_ENV_NAME \
+          --version-label ${{ github.run_id }}
+        
+        aws elasticbeanstalk wait environment-updated \
+          --application-name $ELASTIC_BEANSTALK_NAME \
+          --environment-name $ELASTIC_BEANSTALK_ENV_NAME
+        
+#        aws s3 cp deploy-files/${{ github.run_id }}.zip s3://elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}/$S3_KEY
+#        aws elasticbeanstalk create-application-version --application-name $ELASTIC_BEANSTALK_NAME --version-label ${{github.run_id}} --description ${{github.run_id}} --source-bundle S3Bucket="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}",S3Key="$S3_KEY"
+#        aws elasticbeanstalk update-environment --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME --version-label ${{github.run_id}}
+#        aws elasticbeanstalk wait environment-updated --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME
         
 #    - name: Deploy to Elastic Beanstalk
 #      run: |
