@@ -65,10 +65,10 @@ jobs:
           if [ "$ENV_EXISTS" == "None" ]; then
             echo "Environment does not exist. Creating environment..."
 
-          # Find the latest Node.js 18 platform ARN
+          # Correct the query for platform ARN
           PLATFORM_ARN=$(aws elasticbeanstalk list-platform-versions \
-            --filters "Name=PlatformName,Values=Node.js" "Name=PlatformVersion,Operator=starts_with,Values=18" \
-            --query "PlatformSummaryList[0].PlatformArn" \
+            --region "$REGION" \
+            --query "PlatformSummaryList[?contains(PlatformName, 'Node.js') && contains(PlatformVersion, '18')].PlatformArn | [0]" \
             --output text)
 
             echo "Using platform ARN: $PLATFORM_ARN"
