@@ -68,7 +68,7 @@ jobs:
           # Correct the query for platform ARN
           PLATFORM_ARN=$(aws elasticbeanstalk list-platform-versions \
             --region "$REGION" \
-            --query "PlatformSummaryList[?contains(PlatformName, 'Node.js') && contains(PlatformVersion, '18')].PlatformArn | [0]" \
+            --query "PlatformSummaryList[?contains(PlatformName, 'Node.js') && contains(PlatformVersion, '22')].PlatformArn | [0]" \
             --output text)
 
             echo "Using platform ARN: $PLATFORM_ARN"
