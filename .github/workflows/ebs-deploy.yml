@@ -42,8 +42,8 @@ jobs:
       - name: Ensure Elastic Beanstalk Environment Exists
         run: |
           set -e
-          ENVIRONMENT_NAME="angular-github-ebs-env"
-          APPLICATION_NAME="angular-github-ebs-app"
+          ENVIRONMENT_NAME="angular-github-ebs-env-v1"
+          APPLICATION_NAME="angular-github-ebs-app-v1"
           REGION="us-east-1"
 
           echo "Checking if environment $ENVIRONMENT_NAME exists..."
