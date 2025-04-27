@@ -87,7 +87,14 @@ jobs:
       uses: actions/download-artifact@v4.1.7
 #      with:
 #        name: deploy-files
-#
+
+    - name: Verify artifact exists
+      run: |
+        if [ ! -f "deploy-files/${{ github.run_id }}.zip" ]; then
+          echo "ERROR: Artifact download/${{ github.run_id }}.zip not found."
+          exit 1
+        fi
+
 #    - name: Setup EB CLI
 #      run: |
 #        python --version
