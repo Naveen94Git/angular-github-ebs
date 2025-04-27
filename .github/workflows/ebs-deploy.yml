@@ -1,163 +1,61 @@
-name: Deploy Angular to Elastic Beanstalk
+name: Deploy Application
 
 on:
   push:
     branches:
     - main
 
-env:
-  PROJECT_LOCATION: dist/angular-github-actions-amazon-s3
-  ELASTIC_BEANSTALK_NAME: angular-github-ebs-app
-  ELASTIC_BEANSTALK_ENV_NAME: angular-github-ebs-env
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout branch
+        uses: actions/checkout@v2
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: 16
+      # Sets up node & npm capabilities
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
 
-    - name: Cache node modules
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+      # install dependencies
+      - run: npm install
 
-    - name: Install dependencies
-      run: npm install
-      working-directory: ${{ env.PROJECT_LOCATION }}
+      # run our app's build command
+      - name: Run ng build
+        run: npm run build -- --configuration production
 
-    - name: Run tests
-      run: npm run test:headless
+      # package our entire project folder except for node_modules (they are bundled so we can skip them)
+      - name: Create zip
+        run: zip -r deploy.zip . -x ./node_modules/\*
 
-    - name: Build
-#      run: npm run build -- --configuration production --output-path=dist/angular-github-actions-amazon-s3
-      run: npm run build -- --configuration production
-      working-directory: ${{ env.PROJECT_LOCATION }}
+      # create a random version id for this build
+      - name: Set UUID
+        id: generate-uuid
+        uses: filipstefansson/uuid-action@v1
+        with:
+          name: ${{ github.sha }}
 
-    - name: Package app into zip
-      run: |
-        cd ${{ env.PROJECT_LOCATION }}
-        zip -r ../../../${{ github.run_id }}.zip .
-#        cd ${{github.run_id}}
-#        zip -r ../${{github.run_id}}.zip .
-#        cd dist/angular-github-actions-amazon-s3
-#        zip -r ../../deploy.zip .
+      # provides convenient environment variables for doing things with Git
+      - name: Inject slug/short variables
+        uses: rlespinasse/github-slug-action@v3.x
 
-    - name: Get timestamp
-      uses: gerred/actions/current-time@master
-      id: current-time
-
-    - name: Run string replace
-      uses: frabert/replace-string-action@master
-      id: format-time
-      with:
-        pattern: '[:\.]+'
-        string: "${{ steps.current-time.outputs.time }}"
-        replace-with: '-'
-        flags: 'g'
-
-    - name: List files
-      run: ls -al
-
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v4.3.3
-      with: 
-        name: deploy-files
-        path: ${{github.run_id}}.zip
-
-    - run: |
-        ls -al dist/angular-github-actions-amazon-s3
-        ls -al .
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-
-    steps:
-    - name: Download Artifact
-      uses: actions/download-artifact@v4.1.7
-#      with:
-#        name: deploy-files
-
-    - name: Verify artifact exists
-      run: |
-        if [ ! -f "deploy-files/${{ github.run_id }}.zip" ]; then
-          echo "ERROR: Artifact download/${{ github.run_id }}.zip not found."
-          exit 1
-        fi
-
-#    - name: Setup EB CLI
-#      run: |
-#        python --version
-#        pip --version
-#        pip install awsebcli --upgrade --user
-#        eb --version
-#        
-#    - name: Configure AWS Credentials
-#      uses: aws-actions/configure-aws-credentials@v4
-#      with:
-#        aws-region: ${{ secrets.AWS_REGION }}
-#        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#
-#    - name: Deploy to Elastic Beanstalk
-#      run: |
-#        ls -al deploy-files
-#        S3_BUCKET="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}"
-#        S3_KEY="artifact/angular-github-actions-amazon-s3/${{ github.run_id }}.zip"
-#
-#        aws s3 cp deploy-files/${{ github.run_id }}.zip s3://$S3_BUCKET/$S3_KEY
-#
-#        aws elasticbeanstalk create-application-version \
-#          --application-name $ELASTIC_BEANSTALK_NAME \
-#          --version-label ${{ github.run_id }} \
-#          --description "Deployed from GitHub Actions run ${{ github.run_id }}" \
-#          --source-bundle S3Bucket="$S3_BUCKET",S3Key="$S3_KEY"
-#        
-#        aws elasticbeanstalk update-environment \
-#          --application-name $ELASTIC_BEANSTALK_NAME \
-#          --environment-name $ELASTIC_BEANSTALK_ENV_NAME \
-#          --version-label ${{ github.run_id }}
-#        
-#        aws elasticbeanstalk wait environment-updated \
-#          --application-name $ELASTIC_BEANSTALK_NAME \
-#          --environment-name $ELASTIC_BEANSTALK_ENV_NAME
-#        
-#        aws s3 cp deploy-files/${{ github.run_id }}.zip s3://elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}/$S3_KEY
-#        aws elasticbeanstalk create-application-version --application-name $ELASTIC_BEANSTALK_NAME --version-label ${{github.run_id}} --description ${{github.run_id}} --source-bundle S3Bucket="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}",S3Key="$S3_KEY"
-#        aws elasticbeanstalk update-environment --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME --version-label ${{github.run_id}}
-#        aws elasticbeanstalk wait environment-updated --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME
-        
-#    - name: Deploy to Elastic Beanstalk
-#      run: |
-#        S3_KEY="artifact/angular-github-actions-amazon-s3/${{ github.run_id }}.zip"
-#        aws s3 cp "deploy-files/${{ github.run_id }}.zip" s3://elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}/$S3_KEY
-#        aws elasticbeanstalk create-application-version --application-name $ELASTIC_BEANSTALK_NAME --version-label ${{github.run_id}} --description ${{github.run_id}} --source-bundle S3Bucket="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}",S3Key="$S3_KEY"
-#        aws elasticbeanstalk update-environment --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME --version-label ${{github.run_id}}
-#        aws elasticbeanstalk wait environment-updated --application-name $ELASTIC_BEANSTALK_NAME --environment-name $ELASTIC_BEANSTALK_ENV_NAME
-
-    - name: Deploy to Elastic Beanstalk
-      uses: einaregilsson/beanstalk-deploy@v21
-      with:
-        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        application_name: ${{ secrets.EB_APPLICATION_NAME }}
-        environment_name: ${{ secrets.EB_ENV_NAME }}
-        region: ${{ secrets.AWS_REGION }}
-        version_label: "v-${{ steps.format-time.outputs.replaced }}"
-#        version_label: "v-${{ github.run_number }}"
-#        deployment_package: deploy.zip
-        deployment_package: "${{github.run_id}}.zip"
-        
-    - name: Deployed!
-      run: echo App deployed to ELB
-      
+      # if we are on "development" branch, we will deploy to our development environment. You can add as many of these "if" blocks as needed for different branches.
+      - if: env.GITHUB_REF_SLUG == 'main'
+        name: Deploy to main
+        uses: einaregilsson/beanstalk-deploy@v14
+        with:
+          # you should have these 2 secrets defined in your Github repo, and they should point to an AWS IAM account with permissions to deploy to Beanstalk
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          # todo: replace
+          application_name: "angular-github-ebs-app"
+          # todo: replace
+          environment_name: "angular-github-ebs-env"
+          version_label: ${{ steps.generate-uuid.outputs.uuid }}
+          # todo: replace
+          region: "us-east-1"
+          deployment_package: deploy.zip
