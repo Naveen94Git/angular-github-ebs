@@ -58,47 +58,41 @@ jobs:
             echo "Application already exists. Continuing..."
           fi
 
-      - name: "Deploy Application Version"
-        run: |
-          aws elasticbeanstalk create-application-version --application-name $APPLICATION_NAME --version-label ${{github.run_id}} --description ${{github.run_id}} --source-bundle S3Bucket="elasticbeanstalk-us-east-1-${{ secrets.AWS_ACCOUNT_ID }}",S3Key="$S3_KEY"
-          aws elasticbeanstalk update-environment --application-name $APPLICATION_NAME --environment-name $ENVIRONMENT_NAME --version-label ${{github.run_id}}
-          aws elasticbeanstalk wait environment-updated --application-name $APPLICATION_NAME --environment-name $ENVIRONMENT_NAME
+          echo "Checking if environment $ENVIRONMENT_NAME exists..."
 
-#          echo "Checking if environment $ENVIRONMENT_NAME exists..."
-#
-#          ENV_EXISTS=$(aws elasticbeanstalk describe-environments --application-name "$APPLICATION_NAME" --environment-names "$ENVIRONMENT_NAME" --region "$REGION" --query "Environments[0].Status" --output text || echo "None")
+          ENV_EXISTS=$(aws elasticbeanstalk describe-environments --application-name "$APPLICATION_NAME" --environment-names "$ENVIRONMENT_NAME" --region "$REGION" --query "Environments[0].Status" --output text || echo "None")
 
-#          if [ "$ENV_EXISTS" == "None" ]; then
-#            echo "Environment does not exist. Creating environment..."
+          if [ "$ENV_EXISTS" == "None" ]; then
+            echo "Environment does not exist. Creating environment..."
 
-#          # Correct the query for platform ARN
-#          PLATFORM_ARN=$(aws elasticbeanstalk list-platform-versions \
-#            --region "$REGION" \
-#            --query "PlatformSummaryList[?contains(PlatformName, 'Node.js') && contains(PlatformVersion, '18')].PlatformArn | [0]" \
-#            --output text)
+          # Correct the query for platform ARN
+          PLATFORM_ARN=$(aws elasticbeanstalk list-platform-versions \
+            --region "$REGION" \
+            --query "PlatformSummaryList[?contains(PlatformName, 'Node.js') && contains(PlatformVersion, '18')].PlatformArn | [0]" \
+            --output text)
 
-#          # Check if PLATFORM_ARN is empty or null
-#          if [ "$PLATFORM_ARN" == "None" ] || [ -z "$PLATFORM_ARN" ]; then
-#            echo "Error: No valid Node.js 18 platform found. Please check platform availability in the AWS region."
-#            exit 1
-#          fi
+          # Check if PLATFORM_ARN is empty or null
+          if [ "$PLATFORM_ARN" == "None" ] || [ -z "$PLATFORM_ARN" ]; then
+            echo "Error: No valid Node.js 18 platform found. Please check platform availability in the AWS region."
+            exit 1
+          fi
 
-#            echo "Using platform ARN: $PLATFORM_ARN"
+            echo "Using platform ARN: $PLATFORM_ARN"
 
-#            # Create the environment with the valid Platform ARN
-#            aws elasticbeanstalk create-environment \
-#              --application-name "$APPLICATION_NAME" \
-#              --environment-name "$ENVIRONMENT_NAME" \
-#              --platform-arn "$PLATFORM_ARN" \
-#              --option-settings Namespace=aws:elasticbeanstalk:environment,OptionName=EnvironmentType,Value=SingleInstance \
-#              --region "$REGION"
+            # Create the environment with the valid Platform ARN
+            aws elasticbeanstalk create-environment \
+              --application-name "$APPLICATION_NAME" \
+              --environment-name "$ENVIRONMENT_NAME" \
+              --platform-arn "$PLATFORM_ARN" \
+              --option-settings Namespace=aws:elasticbeanstalk:environment,OptionName=EnvironmentType,Value=SingleInstance \
+              --region "$REGION"
               
-#            echo "Environment creation triggered. Waiting for it to be ready..."
-#            aws elasticbeanstalk wait environment-exists --application-name "$APPLICATION_NAME" --environment-names "$ENVIRONMENT_NAME" --region "$REGION"
-#            echo "Environment created!"
-#          else
-#            echo "Environment already exists. Continuing deployment..."
-#          fi
+            echo "Environment creation triggered. Waiting for it to be ready..."
+            aws elasticbeanstalk wait environment-exists --application-name "$APPLICATION_NAME" --environment-names "$ENVIRONMENT_NAME" --region "$REGION"
+            echo "Environment created!"
+          else
+            echo "Environment already exists. Continuing deployment..."
+          fi
 
       # 🚀 Deploy to Elastic Beanstalk
       - name: Deploy to Elastic Beanstalk
